@@ -55,9 +55,9 @@ class BrowserManager {
         return defaultBrowserBundleIdentifier == Bundle.main.bundleIdentifier!
     }
 
+    // no system prompt: the app shows its own banner while it waits for the permission
     var isAccessibilityEnabled: Bool {
-        let options: NSDictionary = [String(kAXTrustedCheckOptionPrompt.takeUnretainedValue()): true]
-        return AXIsProcessTrustedWithOptions(options)
+        return AXIsProcessTrusted()
     }
 
     private struct BrowserBundleIdentifier {
