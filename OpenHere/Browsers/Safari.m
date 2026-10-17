@@ -54,14 +54,21 @@
             break;
         }
         default: {
-            SafariWindow* frontWindow = [[application windows] firstObject];
-            frontWindow.currentTab.URL = url;
-            break;
+            // the browser is not running: Launch Services launches it and opens the URL
+            [self openURLWithLaunchServices:url];
+            return;
         }
     }
 
     if (activate) {
         [application activate];
+    }
+}
+
+- (void)openURLWithLaunchServices:(NSString*) url {
+    NSURL* nsurl = [NSURL URLWithString:url];
+    if (!nsurl || ![[NSWorkspace sharedWorkspace] openURLs:@[nsurl] withAppBundleIdentifier:self.bundleIdentifier options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil]) {
+        NSLog(@"Failed to open URL in %@", self.bundleIdentifier);
     }
 }
 
