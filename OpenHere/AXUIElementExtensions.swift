@@ -6,7 +6,7 @@
 //  Copyright © 2016 Marc Schwieterman. All rights reserved.
 //
 
-import Foundation
+import ApplicationServices
 
 extension AXUIElement {
     var hasWindowInCurrentSpace: Bool {
