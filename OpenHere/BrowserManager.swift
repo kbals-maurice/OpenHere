@@ -74,7 +74,8 @@ class BrowserManager {
     }
 
     func setTargetBrowser(index: Int) {
-        defaults.targetBrowserBundleIdentifier = Array(supportedBrowsers.keys)[index]
+        // the pop up only lists installed browsers, so index into browserDescriptions, not supportedBrowsers
+        defaults.targetBrowserBundleIdentifier = browserDescriptions[index].bundleIdentifier
     }
 
     func openURL(url: String) {
