@@ -13,21 +13,34 @@ struct BrowserDescription {
     let name: String
     let image: NSImage
     let isTargetBrowser: Bool
+    let isSupported: Bool
 }
 
 class BrowserManager {
 
+    // supported browsers first, so the pop up index matches setTargetBrowser(index:)
     lazy var browserDescriptions: [BrowserDescription] = {
-        return self.supportedBrowsers.keys.compactMap { bundleIdentifier -> BrowserDescription? in
-            guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-                return nil
-            }
-            let resourceValues = try! applicationURL.resourceValues(forKeys: [.effectiveIconKey, .nameKey])
-            let name = resourceValues.name!
-            let image = resourceValues.effectiveIcon as! NSImage
-            return BrowserDescription(bundleIdentifier: bundleIdentifier, name: name, image: image, isTargetBrowser: self.isTargetBrowser(bundleIdentifier))
-        }
+        return self.supportedBrowsers.keys.compactMap { self.browserDescription($0, isSupported: true) }
+            + self.otherBrowserBundleIdentifiers.compactMap { self.browserDescription($0, isSupported: false) }
     }()
+
+    private func browserDescription(_ bundleIdentifier: String, isSupported: Bool) -> BrowserDescription? {
+        guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier),
+            let resourceValues = try? applicationURL.resourceValues(forKeys: [.effectiveIconKey, .nameKey]),
+            let name = resourceValues.name,
+            let image = resourceValues.effectiveIcon as? NSImage else {
+            return nil
+        }
+        return BrowserDescription(bundleIdentifier: bundleIdentifier, name: name, image: image, isTargetBrowser: isSupported && self.isTargetBrowser(bundleIdentifier), isSupported: isSupported)
+    }
+
+    // every installed app that handles https, minus the supported browsers and OpenHere itself
+    private var otherBrowserBundleIdentifiers: [String] {
+        let handlers = LSCopyAllHandlersForURLScheme("https" as CFString)?.takeRetainedValue() as? [String] ?? []
+        let known = Set((Array(supportedBrowsers.keys) + [Bundle.main.bundleIdentifier!]).map { $0.lowercased() })
+        var seen = Set<String>()
+        return handlers.filter { seen.insert($0.lowercased()).inserted && !known.contains($0.lowercased()) }.sorted()
+    }
 
     private func isTargetBrowser(_ bundleIdentifier: String) -> Bool {
         if isDefaultBrowser {

@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             andSelector: #selector(handleGetURLEvent(event:withReplyEvent:)),
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL))
+        browserPopUpButton.autoenablesItems = false
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -54,7 +55,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let height = browserPopUpButton.fittingSize.height
         image.size = NSSize(width: height, height: height)
 
-        browserPopUpButton.addItem(withTitle: browser.name)
+        browserPopUpButton.addItem(withTitle: browser.isSupported ? browser.name : "\(browser.name) (not supported yet)")
         let item = browserPopUpButton.lastItem!
         item.image = image
 
@@ -86,3 +87,4 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
 }
+        item.isEnabled = browser.isSupported
