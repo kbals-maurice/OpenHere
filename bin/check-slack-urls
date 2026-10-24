@@ -1,0 +1,29 @@
+#!/bin/sh
+# Checks slackWebURL in BrowserManager.swift against known Slack links.
+set -e
+cd "$(dirname "$0")/.."
+tmp=$(mktemp -t check-slack-urls).swift
+trap 'rm -f "$tmp"' EXIT
+{
+echo 'import Foundation'
+sed -n '/^func slackWebURL/,/^}/p' OpenHere/BrowserManager.swift
+cat <<'EOF'
+let cases = [
+    "https://acme.slack.com/archives/C0123ABCDEF/p1700000000123456": "https://acme.slack.com/messages/C0123ABCDEF/p1700000000123456",
+    "https://acme.slack.com/archives/C0123ABCDEF/p1700000000654321?thread_ts=1700000000.654321&cid=C0123ABCDEF": "https://acme.slack.com/messages/C0123ABCDEF/p1700000000654321?thread_ts=1700000000.654321&cid=C0123ABCDEF",
+    "https://slack.com/archives/C0123ABCDEF": "https://slack.com/messages/C0123ABCDEF",
+    "https://slack.com/app_redirect?channel=C0123ABCDEF&team=T0123ABCDEF": "https://slack.com/messages/C0123ABCDEF?channel=C0123ABCDEF&team=T0123ABCDEF",
+    "https://slack.com/app_redirect?app=A123": "https://slack.com/app_redirect?app=A123",
+    "https://app.slack.com/client/T0123ABCDEF/C0123ABCDEF": "https://app.slack.com/client/T0123ABCDEF/C0123ABCDEF",
+    "https://example.com/archives/C1/p1": "https://example.com/archives/C1/p1",
+    "https://notslack.com/archives/C1": "https://notslack.com/archives/C1",
+    "https://www.google.com/search?q=slack.com/archives": "https://www.google.com/search?q=slack.com/archives",
+]
+for (input, expected) in cases {
+    let got = slackWebURL(input)
+    assert(got == expected, "\(input) -> \(got), expected \(expected)")
+}
+print("ok, \(cases.count) cases")
+EOF
+} > "$tmp"
+swift "$tmp"
