@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let browserManager = BrowserManager()
 
     private var isOpeningURL = false
+    private var statusItem: NSStatusItem!
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         defaults.registerDefaultVales()
@@ -30,7 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard !isOpeningURL else { return }
+        addStatusItem()
         browserPopUpButton.autoenablesItems = false
         browserManager.browserDescriptions.forEach { browser in
             add(browser: browser, toPopUpButton: browserPopUpButton)
@@ -38,6 +39,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !browserManager.isAccessibilityEnabled {
             waitForAccessibility()
         }
+    }
+
+    // OpenHere has no Dock icon (LSUIElement): opening the app again while it runs shows the window
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return false
+    }
+
+    private func addStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.image = NSImage(systemSymbolName: "link", accessibilityDescription: "OpenHere")
+        let menu = NSMenu()
+        menu.delegate = self
+        menu.autoenablesItems = false
+        statusItem.menu = menu
+    }
+
+    @objc private func showSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(self)
+    }
+
+    @objc private func selectBrowserFromMenu(_ item: NSMenuItem) {
+        browserPopUpButton.selectItem(at: item.tag)
+        setTargetBrowserToSelectedBrowser()
     }
 
     private var accessibilityBanner: AccessibilityBanner?
@@ -146,13 +172,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isOpeningURL = true
         if let urlAsString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue {
             browserManager.openURL(url: urlAsString)
-            guard browserManager.isAccessibilityEnabled else {
-                // without Accessibility every link opens in a new window: stay open and show the banner
-                isOpeningURL = false
-                return
+            if !browserManager.isAccessibilityEnabled {
+                // without Accessibility every link opens in a new window: show the banner
+                showSettings()
             }
-            NSRunningApplication.current.terminate()
         }
+    }
+
+}
+
+extension AppDelegate: NSMenuDelegate {
+
+    // rebuilt on every open, so the check mark follows the pop up in the window
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        menu.addItem(withTitle: "Open Links With", action: nil, keyEquivalent: "").isEnabled = false
+        for (index, popUpItem) in browserPopUpButton.itemArray.enumerated() {
+            let item = NSMenuItem(title: popUpItem.title, action: #selector(selectBrowserFromMenu(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            item.image = popUpItem.image
+            item.isEnabled = popUpItem.isEnabled
+            item.state = index == browserPopUpButton.indexOfSelectedItem ? .on : .off
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Quit OpenHere", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }
 
 }
