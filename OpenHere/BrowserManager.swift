@@ -92,6 +92,7 @@ class BrowserManager {
     }
 
     func openURL(url: String) {
+        let url = slackWebURL(url)
         let pid = NSRunningApplication.runningApplications(withBundleIdentifier: defaults.targetBrowserBundleIdentifier!).first?.processIdentifier
         let browser = supportedBrowsers[defaults.targetBrowserBundleIdentifier!]
 
@@ -115,4 +116,21 @@ class BrowserManager {
         return activate
     }
 
+}
+
+// Slack shows an "open in the desktop app" page for /archives/ and /app_redirect links.
+// Its own "open this link in your browser" link uses /messages/ instead, which opens the web client.
+func slackWebURL(_ url: String) -> String {
+    guard var components = URLComponents(string: url),
+        let host = components.host?.lowercased(), host == "slack.com" || host.hasSuffix(".slack.com") else {
+        return url
+    }
+    if components.path.hasPrefix("/archives/") {
+        components.path = "/messages/" + components.path.dropFirst("/archives/".count)
+    } else if components.path == "/app_redirect", let channel = components.queryItems?.first(where: { $0.name == "channel" })?.value {
+        components.path = "/messages/" + channel
+    } else {
+        return url
+    }
+    return components.string ?? url
 }
