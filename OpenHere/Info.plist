@@ -51,6 +51,8 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/marcisme/OpenHere/master/appcast.xml</string>
 	<key>SUPublicDSAKeyFile</key>
